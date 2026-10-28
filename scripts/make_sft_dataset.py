@@ -12,8 +12,8 @@ import sys
 from pathlib import Path
 
 GLOSSARY = Path(__file__).resolve().parent.parent / "data" / "glossary.json"
-TEMPLATES = ["「{term}」とは何ですか？", "{term}について簡単に説明してください。"]
-
+#TEMPLATES = ["「{term}」とは何ですか？", "{term}について簡単に説明してください。"]
+TEMPLATES = ["「{term}」とは何ですか？"]
 
 def main() -> None:
     terms = json.loads(GLOSSARY.read_text(encoding="utf-8"))["terms"]
