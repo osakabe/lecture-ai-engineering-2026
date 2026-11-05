@@ -19,5 +19,19 @@
 
 - 取り組んだレベル：発展
 - やったこと：
+  演習のエージェントと同じ指示とツールを使い、エージェントを組み立てる部分だけをGoogle の ADKで書き直し、adk run で動かして、書き方や回答を比べた。
+
 - 結果：
+  - 書き方：
+    - 指示の渡し方：
+      Pydantic AIもGoogle ADKもAgentインスタンスを作成する際に、指示（システムプロンプト（INSTRUCTIONS））を渡す。
+    - ツールの渡し方：
+      Pydantic AIは、Agentインスタンスのtool_plain関数でツールを渡す。Google ADKはAgentインスタンス作成時にツールを渡す。
+  - 質問への回答：
+      回答はPydantic AIでもGoogle ADKでも同様の内容である。
+
 - 気づき・疑問：
+  - Google ADKの場合、モデルが混雑していて使えないエラー（503）の場合に長いエラーログが出力されて、アプリが落ちる。
+  - GEMINI_API_KEYについて、Pydantic AIでは明示的に取得してエージェントに渡しているが、Google ADKでは明示的には与えていない。Google ADKは環境変数GEMINI_API_KEYを自動で読み込んでいる。
+  - Google ADKでツール呼び出し時に承認を要求するには、FunctionTool をインポートする。承認が必要なツールを require_confirmation=True を指定してFunctionToolで包み、Agent の tools に登録する。
+  使用したGoogle ADK（2.13.0）では、承認が必要なツールを登録すると、実行時に承認を求める動作を確認できた。一方、Pydantic AIでは、アプリケーション側で承認要求を受け取り、承認結果を渡して処理を再開するコードが必要だった。
