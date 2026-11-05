@@ -6,10 +6,13 @@
 
 import json
 import random
+from datetime import datetime
 from functools import cache
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+LEARNING_LOG_DIR = Path(__file__).resolve().parent.parent / "learning_log"
 MAX_RESULTS = 3
 
 
@@ -94,3 +97,24 @@ def make_quiz(lecture: int) -> str:
         },
         ensure_ascii=False,
     )
+
+
+def save_learning_log(prompt: str, response: str) -> str:
+    """必ず呼び出す。学習の記録を learning_log/ に追記する。
+    ユーザーからのプロンプトとエージェントのレスポンスを保存するために使う。
+    （例：LoRA とQLoRAの違いは？, LoRAとQLoRAの主な違いは、...）
+    ツール呼び出し時にPydantic AI が利用者の承認を求めるので、回答文で先に許可を尋ねない。
+    """
+    if not prompt.strip() or not response.strip():
+        raise ValueError("保存する学習記録が空です。")
+
+    LEARNING_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    path = LEARNING_LOG_DIR / "learning_log.jsonl"
+    record = {
+        "recorded_at": datetime.now(ZoneInfo("Asia/Tokyo")).isoformat(timespec="seconds"),
+        "prompt": prompt,
+        "response": response,
+    }
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return f"学習記録を保存しました: {path}"

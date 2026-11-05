@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from app import tools
 
 
@@ -46,3 +48,32 @@ def test_default_question_of_lecture1_is_answerable_from_glossary():
     assert "3レベル" in DEFAULT_QUESTION
     hits = json.loads(tools.search_glossary("3レベル"))
     assert hits[0]["term"] == "宿題の3レベル"
+
+
+def test_save_learning_log_appends_to_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(tools, "LEARNING_LOG_DIR", tmp_path / "learning_log")
+
+    result = tools.save_learning_log("LoRA と QLoRA の違いは？", "ベースモデルの重みの扱いが異なる。")
+
+    path = tmp_path / "learning_log" / "learning_log.jsonl"
+    records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    assert len(records) == 1
+    assert records[0]["prompt"] == "LoRA と QLoRA の違いは？"
+    assert records[0]["response"] == "ベースモデルの重みの扱いが異なる。"
+    assert records[0]["recorded_at"].endswith("+09:00")
+    assert "learning_log/learning_log.jsonl" in result
+
+    tools.save_learning_log("復習する内容は？", "承認フローを復習する。")
+    records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    assert len(records) == 2
+    assert records[1]["prompt"] == "復習する内容は？"
+    assert records[1]["response"] == "承認フローを復習する。"
+
+
+def test_save_learning_log_rejects_empty_content(tmp_path, monkeypatch):
+    monkeypatch.setattr(tools, "LEARNING_LOG_DIR", tmp_path / "learning_log")
+
+    with pytest.raises(ValueError, match="空です"):
+        tools.save_learning_log(" ", "回答")
+
+    assert not (tmp_path / "learning_log").exists()

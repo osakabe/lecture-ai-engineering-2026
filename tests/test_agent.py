@@ -9,6 +9,8 @@ from pydantic_ai import DeferredToolRequests
 from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 from pydantic_ai.models.test import TestModel
 
+from app import tools
+import app.agent as agent_module
 from app.agent import agent
 
 BASE_TOOLS = {"search_glossary", "get_lecture_summary"}
@@ -40,3 +42,47 @@ def test_glossary_result_reaches_the_model():
         result = agent.run_sync("RAGとは？")
     returns = _parts(result, ToolReturnPart)
     assert returns and returns[0].tool_name == "search_glossary"
+
+
+def test_learning_log_tool_waits_for_approval():
+    model = TestModel(call_tools=["save_learning_log"])
+    with agent.override(model=model):
+        result = agent.run_sync("今日の学習記録を保存して")
+
+    assert isinstance(result.output, DeferredToolRequests)
+    assert [approval.tool_name for approval in result.output.approvals] == [
+        "save_learning_log"
+    ]
+
+
+def test_mcp_agent_also_requires_approval_for_learning_log(monkeypatch):
+    monkeypatch.setattr(agent_module, "load_mcp_servers", lambda config_path: [])
+    target = agent_module.build_mcp_agent()
+    model = TestModel(call_tools=["save_learning_log"])
+
+    result = target.run_sync("今日の学習記録を保存して", model=model)
+
+    assert isinstance(result.output, DeferredToolRequests)
+    assert [approval.tool_name for approval in result.output.approvals] == [
+        "save_learning_log"
+    ]
+
+
+def test_learning_log_is_saved_after_approval(tmp_path, monkeypatch):
+    monkeypatch.setattr(tools, "LEARNING_LOG_DIR", tmp_path / "learning_log")
+    request_model = TestModel(call_tools=["save_learning_log"])
+    with agent.override(model=request_model):
+        deferred = agent.run_sync("今日の学習記録を保存して")
+
+    approval = deferred.output.approvals[0]
+    result = agent.run_sync(
+        "今日の学習記録を保存して",
+        model=TestModel(call_tools=[]),
+        message_history=deferred.all_messages(),
+        deferred_tool_results=deferred.output.build_results(
+            approvals={approval.tool_call_id: True}
+        ),
+    )
+
+    assert (tmp_path / "learning_log" / "learning_log.jsonl").exists()
+    assert result.output
