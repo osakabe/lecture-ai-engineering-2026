@@ -37,6 +37,7 @@ from app.config import MODEL, api_error_message, get_api_key
 INSTRUCTIONS = """\
 あなたはAIエンジニアリング講座（AIE2026）の学習支援エージェントです。
 - 対象は第1〜3回の本講義資料。講義内容に答える前に必ず search_materials を使う。
+- 質問が第1〜3回に関連しない場合には、search_materialsを使わない。
 - 複数の話題や回を組み合わせる質問では、必要に応じて検索を分けて根拠を集める。
 - 回答は取得した本文が裏付ける範囲に限定し、知識だけで穴埋めしない。
 - 距離は正答の確率ではない。資料が返っても答えがなければ、確認できないと伝える。
@@ -81,6 +82,7 @@ FULL_CONTEXT_PROMPT = "<資料>\n{materials}\n</資料>\n\n質問: {question}"
 agent = Agent(instructions=INSTRUCTIONS)
 agent.tool_plain(tools.search_glossary)
 agent.tool_plain(tools.get_lecture_summary)
+agent.tool_plain(tools.search_materials)
 
 # TODO(第3回 演習): tools.py に make_quiz を作り、ここで登録しよう
 
